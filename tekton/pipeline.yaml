@@ -34,6 +34,10 @@ spec:
       type: string
       default: x2a-migration
       description: Branch for the migrated output
+    - name: git-token
+      type: string
+      default: ""
+      description: Git PAT for pushing to the output repository
   workspaces:
     - name: shared-workspace
       description: Shared workspace for source code across pipeline tasks
@@ -131,8 +135,17 @@ spec:
           value: |
             git config user.email "x2a-bot@x2ansible.io"
             git config user.name "X2A Migration Bot"
-            git remote add output "$(params.output-repo-url)" || \
-              git remote set-url output "$(params.output-repo-url)"
+
+            REPO_URL="$(params.output-repo-url)"
+            TOKEN="$(params.git-token)"
+            if [ -n "$TOKEN" ]; then
+              AUTHED_URL=$(echo "$REPO_URL" | sed "s|https://|https://x-token:${TOKEN}@|")
+            else
+              AUTHED_URL="$REPO_URL"
+            fi
+
+            git remote add output "$AUTHED_URL" || \
+              git remote set-url output "$AUTHED_URL"
             git checkout -b "$(params.output-branch)"
             git add -A
             git commit -m "feat: migrate $(params.source-technology) to Ansible via x2a-convertor" || true

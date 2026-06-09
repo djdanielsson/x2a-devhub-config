@@ -78,6 +78,8 @@ spec:
       value: $(body.outputRepoUrl)
     - name: output-branch
       value: $(body.outputBranch)
+    - name: git-token
+      value: $(body.gitToken)
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
@@ -98,6 +100,8 @@ spec:
     - name: output-repo-url
     - name: output-branch
       default: x2a-migration
+    - name: git-token
+      default: ""
   resourcetemplates:
     - apiVersion: tekton.dev/v1
       kind: PipelineRun
@@ -121,6 +125,8 @@ spec:
             value: $(tt.params.output-repo-url)
           - name: output-branch
             value: $(tt.params.output-branch)
+          - name: git-token
+            value: $(tt.params.git-token)
         workspaces:
           - name: shared-workspace
             volumeClaimTemplate:
