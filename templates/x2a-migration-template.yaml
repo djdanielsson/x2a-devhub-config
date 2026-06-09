@@ -1,0 +1,130 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: x2a-migration
+  title: X2Ansible Migration
+  description: Migrate Chef, Puppet, or Salt infrastructure code to Ansible using AI-powered analysis and conversion
+  tags:
+    - ansible
+    - migration
+    - ai
+    - chef
+    - puppet
+    - salt
+spec:
+  owner: x2ansible
+  type: tool
+
+  parameters:
+    - title: Source Configuration
+      required:
+        - sourceRepoUrl
+        - sourceTechnology
+      properties:
+        sourceRepoUrl:
+          title: Source Repository URL
+          type: string
+          description: Git URL of the Chef/Puppet/Salt repository to migrate
+          ui:placeholder: https://github.com/org/chef-repo.git
+        sourceTechnology:
+          title: Source Technology
+          type: string
+          description: The infrastructure-as-code technology to migrate from
+          enum:
+            - Chef
+            - Puppet
+            - Salt
+          enumNames:
+            - Chef
+            - Puppet
+            - Salt
+        sourceBranch:
+          title: Source Branch
+          type: string
+          description: Branch of the source repository to use
+          default: main
+
+    - title: Model Selection
+      required:
+        - llmModel
+      properties:
+        llmModel:
+          title: AI Model
+          type: string
+          description: Select the Ollama model to use for migration analysis and code generation
+          default: openai/qwen3:14b
+          enum:
+            - openai/qwen3:14b
+            - openai/qwen3:8b
+            - openai/gpt-oss:20b
+            - openai/ministral-3:14b
+            - openai/deepseek-r1:14b
+            - openai/gemma3:12b
+            - openai/llama3.1:8b
+          enumNames:
+            - Qwen3 14B (recommended)
+            - Qwen3 8B (faster)
+            - GPT-OSS 20B
+            - Ministral-3 14B
+            - DeepSeek R1 14B
+            - Gemma3 12B
+            - Llama 3.1 8B
+
+    - title: Output Configuration
+      required:
+        - outputRepoUrl
+      properties:
+        outputRepoUrl:
+          title: Output Repository URL
+          type: string
+          description: Git repository where migrated Ansible code will be pushed
+          ui:placeholder: https://github.com/org/ansible-output.git
+        outputBranch:
+          title: Output Branch
+          type: string
+          description: Branch name for the migrated output
+          default: x2a-migration
+
+  steps:
+    - id: trigger-tekton-pipeline
+      name: Trigger X2A Migration Pipeline
+      action: kubernetes:create-resource
+      input:
+        namespace: x2a-devhub
+        resource:
+          apiVersion: tekton.dev/v1
+          kind: PipelineRun
+          metadata:
+            generateName: x2a-migration-
+          spec:
+            pipelineRef:
+              name: x2a-migration
+            params:
+              - name: source-repo-url
+                value: ${{ parameters.sourceRepoUrl }}
+              - name: source-branch
+                value: ${{ parameters.sourceBranch }}
+              - name: source-technology
+                value: ${{ parameters.sourceTechnology }}
+              - name: llm-model
+                value: ${{ parameters.llmModel }}
+              - name: output-repo-url
+                value: ${{ parameters.outputRepoUrl }}
+              - name: output-branch
+                value: ${{ parameters.outputBranch }}
+            workspaces:
+              - name: shared-workspace
+                volumeClaimTemplate:
+                  spec:
+                    accessModes:
+                      - ReadWriteOnce
+                    resources:
+                      requests:
+                        storage: 1Gi
+
+  output:
+    links:
+      - title: Pipeline Runs
+        url: https://console-openshift-console.apps.ocp.new.lab.danielsson.us.com/pipelines/ns/x2a-devhub
+      - title: Output Repository
+        url: ${{ parameters.outputRepoUrl }}

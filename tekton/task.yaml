@@ -1,0 +1,99 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: x2a-convertor
+  namespace: x2a-devhub
+  labels:
+    app.kubernetes.io/part-of: x2ansible
+spec:
+  description: Run x2a-convertor to migrate Chef/Puppet/Salt code to Ansible
+  params:
+    - name: source-repo-url
+      type: string
+      description: Git URL of the source repository
+    - name: source-branch
+      type: string
+      default: main
+      description: Branch of the source repository
+    - name: source-technology
+      type: string
+      default: Chef
+      description: Source technology (Chef, Puppet, Salt)
+    - name: phase
+      type: string
+      description: Migration phase to run (init, analyze, migrate)
+    - name: module-migration-plan
+      type: string
+      default: ""
+      description: Module migration plan filename (for migrate phase)
+    - name: high-level-migration-plan
+      type: string
+      default: migration-plan.md
+      description: High-level migration plan filename (for migrate phase)
+    - name: llm-model
+      type: string
+      default: openai/qwen3:14b
+      description: Ollama model to use (openai/ prefix required)
+  workspaces:
+    - name: source
+      description: Workspace containing the cloned source repository
+  steps:
+    - name: run-x2a
+      image: quay.io/x2ansible/x2a-convertor:latest
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: LLM_MODEL
+          value: $(params.llm-model)
+        - name: OPENAI_API_BASE
+          value: http://ollama.ollama.svc.cluster.local:11434/v1
+        - name: OPENAI_API_KEY
+          value: not-needed
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        PHASE="$(params.phase)"
+        SOURCE_DIR="$(workspaces.source.path)"
+        TECHNOLOGY="$(params.source-technology)"
+
+        case "$PHASE" in
+          init)
+            uv run python /app/app.py init \
+              --source-dir "$SOURCE_DIR" \
+              "Migrate this $TECHNOLOGY repository to Ansible"
+            ;;
+          analyze)
+            uv run python /app/app.py analyze \
+              --source-dir "$SOURCE_DIR" \
+              "Analyze all modules for migration"
+            ;;
+          migrate)
+            MODULE_PLAN="$(params.module-migration-plan)"
+            HIGH_PLAN="$(params.high-level-migration-plan)"
+
+            if [ -z "$MODULE_PLAN" ]; then
+              for plan in "$SOURCE_DIR"/migration-plan-*.md; do
+                [ -f "$plan" ] || continue
+                module=$(basename "$plan" .md | sed 's/^migration-plan-//')
+                uv run python /app/app.py migrate \
+                  --source-dir "$SOURCE_DIR" \
+                  --source-technology "$TECHNOLOGY" \
+                  --high-level-migration-plan "$HIGH_PLAN" \
+                  --module-migration-plan "$(basename "$plan")" \
+                  "Convert $module"
+              done
+            else
+              module=$(echo "$MODULE_PLAN" | sed 's/^migration-plan-//' | sed 's/\.md$//')
+              uv run python /app/app.py migrate \
+                --source-dir "$SOURCE_DIR" \
+                --source-technology "$TECHNOLOGY" \
+                --high-level-migration-plan "$HIGH_PLAN" \
+                --module-migration-plan "$MODULE_PLAN" \
+                "Convert $module"
+            fi
+            ;;
+          *)
+            echo "Unknown phase: $PHASE"
+            exit 1
+            ;;
+        esac

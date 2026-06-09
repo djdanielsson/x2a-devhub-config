@@ -1,0 +1,23 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: x2a-convertor
+  title: X2Ansible Convertor
+  description: AI-powered Chef/Puppet/Salt to Ansible migration tool
+  annotations:
+    github.com/project-slug: djdanielsson/x2a-devhub-config
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - ansible
+    - migration
+    - ai
+    - chef
+    - puppet
+    - salt
+  links:
+    - url: https://github.com/x2ansible/x2a-convertor
+      title: Source Code
+spec:
+  type: tool
+  lifecycle: production
+  owner: x2ansible

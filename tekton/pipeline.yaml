@@ -1,0 +1,129 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: x2a-migration
+  namespace: x2a-devhub
+  labels:
+    app.kubernetes.io/part-of: x2ansible
+spec:
+  description: Full X2Ansible migration pipeline (init -> analyze -> migrate -> push)
+  params:
+    - name: source-repo-url
+      type: string
+      description: Git URL of the source Chef/Puppet/Salt repository
+    - name: source-branch
+      type: string
+      default: main
+      description: Branch of the source repository
+    - name: source-technology
+      type: string
+      default: Chef
+      description: Source technology (Chef, Puppet, Salt)
+    - name: llm-model
+      type: string
+      default: openai/qwen3:14b
+      description: Ollama model to use
+    - name: output-repo-url
+      type: string
+      description: Git repository for migrated Ansible output
+    - name: output-branch
+      type: string
+      default: x2a-migration
+      description: Branch for the migrated output
+  workspaces:
+    - name: shared-workspace
+      description: Shared workspace for source code across pipeline tasks
+  tasks:
+    - name: clone-source
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: url
+          value: $(params.source-repo-url)
+        - name: revision
+          value: $(params.source-branch)
+
+    - name: init
+      runAfter:
+        - clone-source
+      taskRef:
+        name: x2a-convertor
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: source-repo-url
+          value: $(params.source-repo-url)
+        - name: source-branch
+          value: $(params.source-branch)
+        - name: source-technology
+          value: $(params.source-technology)
+        - name: phase
+          value: init
+        - name: llm-model
+          value: $(params.llm-model)
+
+    - name: analyze
+      runAfter:
+        - init
+      taskRef:
+        name: x2a-convertor
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: source-repo-url
+          value: $(params.source-repo-url)
+        - name: source-branch
+          value: $(params.source-branch)
+        - name: source-technology
+          value: $(params.source-technology)
+        - name: phase
+          value: analyze
+        - name: llm-model
+          value: $(params.llm-model)
+
+    - name: migrate
+      runAfter:
+        - analyze
+      taskRef:
+        name: x2a-convertor
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: source-repo-url
+          value: $(params.source-repo-url)
+        - name: source-branch
+          value: $(params.source-branch)
+        - name: source-technology
+          value: $(params.source-technology)
+        - name: phase
+          value: migrate
+        - name: llm-model
+          value: $(params.llm-model)
+
+    - name: push-results
+      runAfter:
+        - migrate
+      taskRef:
+        name: git-cli
+        kind: ClusterTask
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: GIT_SCRIPT
+          value: |
+            git config user.email "x2a-bot@x2ansible.io"
+            git config user.name "X2A Migration Bot"
+            git remote add output "$(params.output-repo-url)" || \
+              git remote set-url output "$(params.output-repo-url)"
+            git checkout -b "$(params.output-branch)"
+            git add -A
+            git commit -m "feat: migrate $(params.source-technology) to Ansible via x2a-convertor" || true
+            git push -u output "$(params.output-branch)" --force
