@@ -5,3 +5,4 @@ kind: Kustomization
 resources:
   - task.yaml
   - pipeline.yaml
+  - triggers.yaml

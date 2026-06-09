@@ -19,10 +19,14 @@ spec:
       type: string
       default: Chef
       description: Source technology (Chef, Puppet, Salt)
+    - name: llm-provider
+      type: string
+      default: ollama
+      description: LLM provider (ollama or laptop)
     - name: llm-model
       type: string
       default: openai/qwen3:14b
-      description: Ollama model to use
+      description: Model to use
     - name: output-repo-url
       type: string
       description: Git repository for migrated Ansible output
@@ -64,6 +68,8 @@ spec:
           value: $(params.source-technology)
         - name: phase
           value: init
+        - name: llm-provider
+          value: $(params.llm-provider)
         - name: llm-model
           value: $(params.llm-model)
 
@@ -84,6 +90,8 @@ spec:
           value: $(params.source-technology)
         - name: phase
           value: analyze
+        - name: llm-provider
+          value: $(params.llm-provider)
         - name: llm-model
           value: $(params.llm-model)
 
@@ -104,6 +112,8 @@ spec:
           value: $(params.source-technology)
         - name: phase
           value: migrate
+        - name: llm-provider
+          value: $(params.llm-provider)
         - name: llm-model
           value: $(params.llm-model)
 

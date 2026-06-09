@@ -11,7 +11,8 @@ Backstage catalog and template configuration for the X2Ansible Developer Hub.
 └── tekton/
     ├── kustomization.yaml               # Kustomize entrypoint for Tekton resources
     ├── task.yaml                         # Tekton Task: runs x2a-convertor phases
-    └── pipeline.yaml                     # Tekton Pipeline: clone -> init -> analyze -> migrate -> push
+    ├── pipeline.yaml                     # Tekton Pipeline: clone -> init -> analyze -> migrate -> push
+    └── triggers.yaml                     # EventListener, TriggerTemplate, TriggerBinding, RBAC
 ```
 
 ## How It Works
@@ -23,15 +24,12 @@ The Developer Hub (RHDH) loads two catalog locations from this repo:
 | `catalog-info.yaml` | `Component` | Registers x2a-convertor in the software catalog |
 | `templates/x2a-migration-template.yaml` | `Template` | Provides the migration wizard under "Create" |
 
-When a user fills out the template wizard and clicks "Create", the scaffolder action
-`kubernetes:create-resource` creates a Tekton `PipelineRun` in the `x2a-devhub` namespace.
-The pipeline runs four sequential tasks:
+When a user fills out the template wizard and clicks "Create":
 
-1. **clone-source** -- Clones the user's Chef/Puppet/Salt repository
-2. **init** -- Runs `x2a-convertor init` to generate migration metadata
-3. **analyze** -- Runs `x2a-convertor analyze` to produce per-module migration plans
-4. **migrate** -- Runs `x2a-convertor migrate` for each module plan
-5. **push-results** -- Commits and pushes the Ansible output to the target repository
+1. The `http:backstage:request` scaffolder action POSTs the form data to a Backstage proxy endpoint
+2. The proxy forwards the request to the Tekton EventListener (`el-x2a-migration`) in the cluster
+3. The EventListener creates a PipelineRun via its TriggerTemplate
+4. The pipeline runs: **clone-source** -> **init** -> **analyze** -> **migrate** -> **push-results**
 
 ## Deployment
 
@@ -47,9 +45,10 @@ point at this repo (`djdanielsson/x2a-devhub-config`).
 
 ### 3. Ensure prerequisites
 
-- **OpenShift Pipelines** operator is installed (provides Tekton + `git-clone`/`git-cli` ClusterTasks)
-- **`kubernetes:create-resource`** scaffolder action is enabled in RHDH (comes from the `@backstage/plugin-scaffolder-backend-module-kubernetes` plugin)
-- **Ollama** is accessible at `http://ollama.ollama.svc.cluster.local:11434/v1` from the `x2a-devhub` namespace
+- **OpenShift Pipelines** operator is installed (provides Tekton + ClusterTasks + Triggers)
+- **`http:backstage:request`** plugin is enabled in RHDH dynamic plugins config
+- **Backstage proxy** is configured with `/x2a-trigger` pointing to the EventListener service
+- **Ollama** is accessible at `http://ollama.ollama.svc.cluster.local:11434/v1`
 - The **x2a-convertor container image** (`quay.io/x2ansible/x2a-convertor:latest`) is available
 
 ## Customization

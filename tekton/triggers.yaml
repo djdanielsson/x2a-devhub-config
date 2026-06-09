@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: x2a-trigger-sa
+  namespace: x2a-devhub
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: x2a-trigger-role
+  namespace: x2a-devhub
+rules:
+  - apiGroups: ["triggers.tekton.dev"]
+    resources: ["eventlisteners", "triggerbindings", "triggertemplates", "triggers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["tekton.dev"]
+    resources: ["pipelineruns"]
+    verbs: ["create", "get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: x2a-trigger-binding
+  namespace: x2a-devhub
+subjects:
+  - kind: ServiceAccount
+    name: x2a-trigger-sa
+    namespace: x2a-devhub
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: x2a-trigger-role
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: x2a-migration
+  namespace: x2a-devhub
+spec:
+  params:
+    - name: source-repo-url
+      value: $(body.sourceRepoUrl)
+    - name: source-branch
+      value: $(body.sourceBranch)
+    - name: source-technology
+      value: $(body.sourceTechnology)
+    - name: llm-provider
+      value: $(body.llmProvider)
+    - name: llm-model
+      value: $(body.llmModel)
+    - name: output-repo-url
+      value: $(body.outputRepoUrl)
+    - name: output-branch
+      value: $(body.outputBranch)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: x2a-migration
+  namespace: x2a-devhub
+spec:
+  params:
+    - name: source-repo-url
+    - name: source-branch
+      default: main
+    - name: source-technology
+      default: Chef
+    - name: llm-provider
+      default: ollama
+    - name: llm-model
+      default: openai/qwen3:14b
+    - name: output-repo-url
+    - name: output-branch
+      default: x2a-migration
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: x2a-migration-
+      spec:
+        pipelineRef:
+          name: x2a-migration
+        params:
+          - name: source-repo-url
+            value: $(tt.params.source-repo-url)
+          - name: source-branch
+            value: $(tt.params.source-branch)
+          - name: source-technology
+            value: $(tt.params.source-technology)
+          - name: llm-provider
+            value: $(tt.params.llm-provider)
+          - name: llm-model
+            value: $(tt.params.llm-model)
+          - name: output-repo-url
+            value: $(tt.params.output-repo-url)
+          - name: output-branch
+            value: $(tt.params.output-branch)
+        workspaces:
+          - name: shared-workspace
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: x2a-migration
+  namespace: x2a-devhub
+spec:
+  serviceAccountName: x2a-trigger-sa
+  triggers:
+    - name: x2a-migration-trigger
+      bindings:
+        - ref: x2a-migration
+      template:
+        ref: x2a-migration

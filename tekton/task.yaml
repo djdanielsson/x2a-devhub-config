@@ -30,10 +30,14 @@ spec:
       type: string
       default: migration-plan.md
       description: High-level migration plan filename (for migrate phase)
+    - name: llm-provider
+      type: string
+      default: ollama
+      description: LLM provider (ollama or laptop)
     - name: llm-model
       type: string
       default: openai/qwen3:14b
-      description: Ollama model to use (openai/ prefix required)
+      description: Model to use
   workspaces:
     - name: source
       description: Workspace containing the cloned source repository
@@ -44,13 +48,16 @@ spec:
       env:
         - name: LLM_MODEL
           value: $(params.llm-model)
-        - name: OPENAI_API_BASE
-          value: http://ollama.ollama.svc.cluster.local:11434/v1
         - name: OPENAI_API_KEY
           value: not-needed
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
+
+        case "$(params.llm-provider)" in
+          laptop)  export OPENAI_API_BASE="http://192.168.2.186:1234/v1" ;;
+          *)       export OPENAI_API_BASE="http://ollama.ollama.svc.cluster.local:11434/v1" ;;
+        esac
 
         PHASE="$(params.phase)"
         SOURCE_DIR="$(workspaces.source.path)"
