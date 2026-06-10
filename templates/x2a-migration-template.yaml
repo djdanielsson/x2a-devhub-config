@@ -131,7 +131,7 @@ spec:
       action: http:backstage:request
       input:
         method: POST
-        path: /api/proxy/x2a-trigger
+        path: /proxy/x2a-trigger
         headers:
           content-type: application/json
         body:
