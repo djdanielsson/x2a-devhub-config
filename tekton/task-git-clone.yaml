@@ -1,0 +1,29 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-clone
+  namespace: x2a-devhub
+  labels:
+    app.kubernetes.io/part-of: x2ansible
+spec:
+  description: Clone a git repository
+  params:
+    - name: url
+      type: string
+      description: Repository URL to clone
+    - name: revision
+      type: string
+      default: main
+      description: Revision to checkout
+  workspaces:
+    - name: output
+      description: Workspace to clone into
+  steps:
+    - name: clone
+      image: alpine/git:2.45.2
+      workingDir: $(workspaces.output.path)
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        git clone --branch "$(params.revision)" --single-branch --depth 1 \
+          "$(params.url)" "$(workspaces.output.path)"

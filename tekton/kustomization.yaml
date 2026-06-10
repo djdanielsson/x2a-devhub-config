@@ -4,5 +4,7 @@ kind: Kustomization
 
 resources:
   - task.yaml
+  - task-git-clone.yaml
+  - task-git-cli.yaml
   - pipeline.yaml
   - triggers.yaml

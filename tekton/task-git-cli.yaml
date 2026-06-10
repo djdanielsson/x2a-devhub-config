@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-cli
+  namespace: x2a-devhub
+  labels:
+    app.kubernetes.io/part-of: x2ansible
+spec:
+  description: Run a git script
+  params:
+    - name: GIT_SCRIPT
+      type: string
+      description: Git commands to execute
+  workspaces:
+    - name: source
+      description: Workspace containing the repository
+  steps:
+    - name: git
+      image: alpine/git:2.45.2
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        $(params.GIT_SCRIPT)

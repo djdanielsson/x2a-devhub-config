@@ -45,7 +45,6 @@ spec:
     - name: clone-source
       taskRef:
         name: git-clone
-        kind: ClusterTask
       workspaces:
         - name: output
           workspace: shared-workspace
@@ -126,7 +125,6 @@ spec:
         - migrate
       taskRef:
         name: git-cli
-        kind: ClusterTask
       workspaces:
         - name: source
           workspace: shared-workspace
