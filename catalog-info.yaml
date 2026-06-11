@@ -7,6 +7,9 @@ metadata:
   annotations:
     github.com/project-slug: djdanielsson/x2a-devhub-config
     backstage.io/techdocs-ref: dir:.
+    backstage.io/kubernetes-id: x2a-convertor
+    backstage.io/kubernetes-namespace: x2a-devhub
+    tekton.dev/ci-pipeline: x2a-migration
   tags:
     - ansible
     - migration

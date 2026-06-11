@@ -5,6 +5,7 @@ metadata:
   namespace: x2a-devhub
   labels:
     app.kubernetes.io/part-of: x2ansible
+    backstage.io/kubernetes-id: x2a-convertor
 spec:
   description: Full X2Ansible migration pipeline (init -> analyze -> migrate -> push)
   params:
