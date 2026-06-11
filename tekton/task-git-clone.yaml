@@ -21,9 +21,11 @@ spec:
   steps:
     - name: clone
       image: alpine/git:2.45.2
-      workingDir: $(workspaces.output.path)
       script: |
         #!/usr/bin/env sh
         set -eu
-        git clone --branch "$(params.revision)" --single-branch --depth 1 \
-          "$(params.url)" "$(workspaces.output.path)"
+        cd "$(workspaces.output.path)"
+        git init
+        git remote add origin "$(params.url)"
+        git fetch --depth 1 origin "$(params.revision)"
+        git checkout FETCH_HEAD
