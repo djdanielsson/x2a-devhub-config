@@ -110,6 +110,12 @@ spec:
       value: $(body.outputBranch)
     - name: git-token
       value: $(body.gitToken)
+    - name: pipeline-timeout
+      value: $(body.pipelineTimeout)
+    - name: max-tokens
+      value: $(body.maxTokens)
+    - name: num-ctx
+      value: $(body.numCtx)
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
@@ -132,6 +138,12 @@ spec:
       default: x2a-migration
     - name: git-token
       default: ""
+    - name: pipeline-timeout
+      default: "5"
+    - name: max-tokens
+      default: "16384"
+    - name: num-ctx
+      default: "32768"
   resourcetemplates:
     - apiVersion: tekton.dev/v1
       kind: PipelineRun
@@ -142,6 +154,8 @@ spec:
       spec:
         pipelineRef:
           name: x2a-migration
+        timeouts:
+          pipeline: $(tt.params.pipeline-timeout)h0m0s
         params:
           - name: source-repo-url
             value: $(tt.params.source-repo-url)
@@ -159,6 +173,10 @@ spec:
             value: $(tt.params.output-branch)
           - name: git-token
             value: $(tt.params.git-token)
+          - name: max-tokens
+            value: $(tt.params.max-tokens)
+          - name: num-ctx
+            value: $(tt.params.num-ctx)
         workspaces:
           - name: shared-workspace
             volumeClaimTemplate:

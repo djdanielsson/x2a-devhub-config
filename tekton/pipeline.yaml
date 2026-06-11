@@ -39,6 +39,14 @@ spec:
       type: string
       default: ""
       description: Git PAT for pushing to the output repository
+    - name: max-tokens
+      type: string
+      default: "16384"
+      description: Maximum tokens per LLM response
+    - name: num-ctx
+      type: string
+      default: "32768"
+      description: Input context window size in tokens
   workspaces:
     - name: shared-workspace
       description: Shared workspace for source code across pipeline tasks
@@ -76,6 +84,10 @@ spec:
           value: $(params.llm-provider)
         - name: llm-model
           value: $(params.llm-model)
+        - name: max-tokens
+          value: $(params.max-tokens)
+        - name: num-ctx
+          value: $(params.num-ctx)
 
     - name: analyze
       runAfter:
@@ -98,6 +110,10 @@ spec:
           value: $(params.llm-provider)
         - name: llm-model
           value: $(params.llm-model)
+        - name: max-tokens
+          value: $(params.max-tokens)
+        - name: num-ctx
+          value: $(params.num-ctx)
 
     - name: migrate
       runAfter:
@@ -120,6 +136,10 @@ spec:
           value: $(params.llm-provider)
         - name: llm-model
           value: $(params.llm-model)
+        - name: max-tokens
+          value: $(params.max-tokens)
+        - name: num-ctx
+          value: $(params.num-ctx)
 
     - name: push-results
       runAfter:

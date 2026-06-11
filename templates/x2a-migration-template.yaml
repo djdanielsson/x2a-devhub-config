@@ -125,6 +125,60 @@ spec:
           description: PAT with repo push permissions for the output repository
           ui:field: Secret
 
+    - title: Advanced Settings
+      properties:
+        pipelineTimeout:
+          title: Pipeline Timeout (hours)
+          type: integer
+          description: Maximum hours the pipeline can run before being cancelled
+          default: 5
+          enum:
+            - 1
+            - 2
+            - 3
+            - 5
+            - 8
+            - 12
+          enumNames:
+            - 1 hour
+            - 2 hours
+            - 3 hours
+            - 5 hours (default)
+            - 8 hours
+            - 12 hours
+        maxTokens:
+          title: Max Output Tokens
+          type: integer
+          description: Maximum tokens per LLM response (higher = longer but more complete output)
+          default: 16384
+          enum:
+            - 4096
+            - 8192
+            - 16384
+            - 32768
+          enumNames:
+            - 4K (fast, short output)
+            - 8K (balanced)
+            - 16K (default, recommended)
+            - 32K (large output)
+        numCtx:
+          title: Context Window Size
+          type: integer
+          description: Input context window in tokens — how much source code the model can see at once
+          default: 32768
+          enum:
+            - 8192
+            - 16384
+            - 32768
+            - 65536
+            - 131072
+          enumNames:
+            - 8K (small models)
+            - 16K
+            - 32K (default, recommended)
+            - 64K (large models)
+            - 128K (very large models)
+
   steps:
     - id: trigger-tekton-pipeline
       name: Trigger X2A Migration Pipeline
@@ -143,6 +197,9 @@ spec:
           outputRepoUrl: ${{ parameters.outputRepoUrl }}
           outputBranch: ${{ parameters.outputBranch }}
           gitToken: ${{ parameters.gitToken }}
+          pipelineTimeout: ${{ parameters.pipelineTimeout }}
+          maxTokens: ${{ parameters.maxTokens }}
+          numCtx: ${{ parameters.numCtx }}
 
   output:
     links:

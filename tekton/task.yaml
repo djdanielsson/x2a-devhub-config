@@ -38,6 +38,14 @@ spec:
       type: string
       default: openai/qwen3:14b
       description: Model to use
+    - name: max-tokens
+      type: string
+      default: "16384"
+      description: Maximum tokens per LLM response
+    - name: num-ctx
+      type: string
+      default: "32768"
+      description: Input context window size in tokens
   workspaces:
     - name: source
       description: Workspace containing the cloned source repository
@@ -50,13 +58,28 @@ spec:
           value: $(params.llm-model)
         - name: OPENAI_API_KEY
           value: not-needed
+        - name: MAX_TOKENS
+          value: $(params.max-tokens)
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
 
+        NUM_CTX="$(params.num-ctx)"
+        OLLAMA_HOST="http://ollama.ollama.svc.cluster.local:11434"
+
         case "$(params.llm-provider)" in
           laptop)  export OPENAI_API_BASE="http://192.168.2.186:1234/v1" ;;
-          *)       export OPENAI_API_BASE="http://ollama.ollama.svc.cluster.local:11434/v1" ;;
+          *)
+            export OPENAI_API_BASE="${OLLAMA_HOST}/v1"
+
+            # Strip openai/ prefix for Ollama native API
+            OLLAMA_MODEL=$(echo "$(params.llm-model)" | sed 's|^openai/||')
+
+            echo "Loading model ${OLLAMA_MODEL} with num_ctx=${NUM_CTX}..."
+            curl -sf "${OLLAMA_HOST}/api/generate" \
+              -d "{\"model\":\"${OLLAMA_MODEL}\",\"prompt\":\"hi\",\"options\":{\"num_ctx\":${NUM_CTX}},\"stream\":false}" \
+              > /dev/null 2>&1 || echo "Warning: could not pre-load model with num_ctx"
+            ;;
         esac
 
         PHASE="$(params.phase)"
