@@ -63,14 +63,16 @@ spec:
         SOURCE_DIR="$(workspaces.source.path)"
         TECHNOLOGY="$(params.source-technology)"
 
+        X2A="/app/.venv/bin/python /app/app.py"
+
         case "$PHASE" in
           init)
-            uv run python /app/app.py init \
+            $X2A init \
               --source-dir "$SOURCE_DIR" \
               "Migrate this $TECHNOLOGY repository to Ansible"
             ;;
           analyze)
-            uv run python /app/app.py analyze \
+            $X2A analyze \
               --source-dir "$SOURCE_DIR" \
               "Analyze all modules for migration"
             ;;
@@ -82,7 +84,7 @@ spec:
               for plan in "$SOURCE_DIR"/migration-plan-*.md; do
                 [ -f "$plan" ] || continue
                 module=$(basename "$plan" .md | sed 's/^migration-plan-//')
-                uv run python /app/app.py migrate \
+                $X2A migrate \
                   --source-dir "$SOURCE_DIR" \
                   --source-technology "$TECHNOLOGY" \
                   --high-level-migration-plan "$HIGH_PLAN" \
@@ -91,7 +93,7 @@ spec:
               done
             else
               module=$(echo "$MODULE_PLAN" | sed 's/^migration-plan-//' | sed 's/\.md$//')
-              uv run python /app/app.py migrate \
+              $X2A migrate \
                 --source-dir "$SOURCE_DIR" \
                 --source-technology "$TECHNOLOGY" \
                 --high-level-migration-plan "$HIGH_PLAN" \
