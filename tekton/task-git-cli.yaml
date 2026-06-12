@@ -11,6 +11,10 @@ spec:
     - name: GIT_SCRIPT
       type: string
       description: Git commands to execute
+    - name: GIT_TOKEN
+      type: string
+      default: ""
+      description: Git token passed as env var (avoids inline redaction)
   workspaces:
     - name: source
       description: Workspace containing the repository
@@ -18,6 +22,9 @@ spec:
     - name: git
       image: alpine/git:2.45.2
       workingDir: $(workspaces.source.path)
+      env:
+        - name: GIT_TOKEN
+          value: $(params.GIT_TOKEN)
       script: |
         #!/usr/bin/env sh
         set -eu
