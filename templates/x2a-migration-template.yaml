@@ -107,7 +107,6 @@ spec:
     - title: Output Configuration
       required:
         - outputRepoUrl
-        - gitToken
       properties:
         outputRepoUrl:
           title: Output Repository URL
@@ -119,11 +118,6 @@ spec:
           type: string
           description: Branch name for the migrated output
           default: x2a-migration
-        gitToken:
-          title: Git Personal Access Token
-          type: string
-          description: PAT with repo push permissions for the output repository
-          ui:field: Secret
 
     - title: Advanced Settings
       properties:
@@ -196,7 +190,6 @@ spec:
           llmModel: ${{ parameters.llmModel }}
           outputRepoUrl: ${{ parameters.outputRepoUrl }}
           outputBranch: ${{ parameters.outputBranch }}
-          gitToken: ${{ parameters.gitToken }}
           pipelineTimeout: ${{ parameters.pipelineTimeout }}
           maxTokens: ${{ parameters.maxTokens }}
           numCtx: ${{ parameters.numCtx }}

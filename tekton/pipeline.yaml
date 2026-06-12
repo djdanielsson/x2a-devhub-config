@@ -35,9 +35,6 @@ spec:
       type: string
       default: x2a-migration
       description: Branch for the migrated output
-    - name: git-token
-      type: string
-      description: Git PAT for pushing to the output repository
     - name: max-tokens
       type: string
       default: "16384"
@@ -158,5 +155,3 @@ spec:
           value: $(params.output-branch)
         - name: source-technology
           value: $(params.source-technology)
-        - name: git-token
-          value: $(params.git-token)

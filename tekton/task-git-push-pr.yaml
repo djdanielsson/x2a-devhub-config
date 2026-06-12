@@ -23,9 +23,6 @@ spec:
       type: string
       default: Chef
       description: Source technology name (used in commit/PR messages)
-    - name: git-token
-      type: string
-      description: GitHub PAT with contents:write and pull_requests:write permissions
     - name: pr-title
       type: string
       default: ""
@@ -38,7 +35,10 @@ spec:
       image: alpine:3.20
       env:
         - name: GIT_TOKEN
-          value: $(params.git-token)
+          valueFrom:
+            secretKeyRef:
+              name: x2a-git-token
+              key: token
       workingDir: $(workspaces.source.path)
       script: |
         #!/usr/bin/env sh
@@ -54,7 +54,7 @@ spec:
 
         # ── Validate token ──────────────────────────────────────────────
         if [ -z "$GIT_TOKEN" ]; then
-          echo "ERROR: git-token param is empty."
+          echo "ERROR: GIT_TOKEN is empty. Ensure the x2a-git-token secret exists in the namespace."
           exit 1
         fi
         echo "Token received (length: ${#GIT_TOKEN})"

@@ -108,8 +108,6 @@ spec:
       value: $(body.outputRepoUrl)
     - name: output-branch
       value: $(body.outputBranch)
-    - name: git-token
-      value: $(body.gitToken)
     - name: pipeline-timeout
       value: $(body.pipelineTimeout)
     - name: max-tokens
@@ -136,7 +134,6 @@ spec:
     - name: output-repo-url
     - name: output-branch
       default: x2a-migration
-    - name: git-token
     - name: pipeline-timeout
       default: "5"
     - name: max-tokens
@@ -170,8 +167,6 @@ spec:
             value: $(tt.params.output-repo-url)
           - name: output-branch
             value: $(tt.params.output-branch)
-          - name: git-token
-            value: $(tt.params.git-token)
           - name: max-tokens
             value: $(tt.params.max-tokens)
           - name: num-ctx
