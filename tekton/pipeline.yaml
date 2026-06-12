@@ -63,6 +63,7 @@ spec:
           value: $(params.source-branch)
 
     - name: init
+      timeout: "2h"
       runAfter:
         - clone-source
       taskRef:
@@ -89,6 +90,7 @@ spec:
           value: $(params.num-ctx)
 
     - name: analyze
+      timeout: "2h"
       runAfter:
         - init
       taskRef:
@@ -115,6 +117,7 @@ spec:
           value: $(params.num-ctx)
 
     - name: migrate
+      timeout: "3h"
       runAfter:
         - analyze
       taskRef:
