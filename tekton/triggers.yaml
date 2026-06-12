@@ -172,7 +172,7 @@ spec:
           - name: output-branch
             value: $(tt.params.output-branch)
           - name: git-token
-            value: $(tt.params.git-token)
+            value: x2a::$(tt.params.git-token)
           - name: max-tokens
             value: $(tt.params.max-tokens)
           - name: num-ctx

@@ -158,8 +158,9 @@ spec:
             git config user.name "X2A Migration Bot"
 
             REPO_URL="$(params.output-repo-url)"
-            if [ -n "$GIT_TOKEN" ]; then
-              AUTHED_URL=$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:${GIT_TOKEN}@|")
+            TOKEN=$(echo "$GIT_TOKEN" | sed 's/^x2a:://')
+            if [ -n "$TOKEN" ]; then
+              AUTHED_URL=$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:${TOKEN}@|")
             else
               AUTHED_URL="$REPO_URL"
             fi
