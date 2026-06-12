@@ -158,7 +158,7 @@ spec:
             REPO_URL="$(params.output-repo-url)"
             TOKEN="$(params.git-token)"
             if [ -n "$TOKEN" ]; then
-              AUTHED_URL=$(echo "$REPO_URL" | sed "s|https://|https://x-token:${TOKEN}@|")
+              AUTHED_URL=$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:${TOKEN}@|")
             else
               AUTHED_URL="$REPO_URL"
             fi
