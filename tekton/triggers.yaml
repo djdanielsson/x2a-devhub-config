@@ -137,7 +137,6 @@ spec:
     - name: output-branch
       default: x2a-migration
     - name: git-token
-      default: ""
     - name: pipeline-timeout
       default: "5"
     - name: max-tokens
@@ -172,7 +171,7 @@ spec:
           - name: output-branch
             value: $(tt.params.output-branch)
           - name: git-token
-            value: x2a::$(tt.params.git-token)
+            value: $(tt.params.git-token)
           - name: max-tokens
             value: $(tt.params.max-tokens)
           - name: num-ctx

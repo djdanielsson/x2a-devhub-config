@@ -1,0 +1,183 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-push-pr
+  namespace: x2a-devhub
+  labels:
+    app.kubernetes.io/part-of: x2ansible
+spec:
+  description: Push migrated code to an output repo and open a GitHub PR
+  params:
+    - name: output-repo-url
+      type: string
+      description: "HTTPS URL of the output repository (e.g. https://github.com/org/repo.git)"
+    - name: output-branch
+      type: string
+      default: x2a-migration
+      description: Branch name to push the migrated code to
+    - name: base-branch
+      type: string
+      default: main
+      description: Target branch for the pull request
+    - name: source-technology
+      type: string
+      default: Chef
+      description: Source technology name (used in commit/PR messages)
+    - name: git-token
+      type: string
+      description: GitHub PAT with contents:write and pull_requests:write permissions
+    - name: pr-title
+      type: string
+      default: ""
+      description: "PR title (auto-generated if empty)"
+  workspaces:
+    - name: source
+      description: Workspace containing the migrated code
+  steps:
+    - name: push-and-pr
+      image: alpine:3.20
+      env:
+        - name: GIT_TOKEN
+          value: $(params.git-token)
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+
+        apk add --no-cache git curl jq > /dev/null 2>&1
+
+        OUTPUT_REPO="$(params.output-repo-url)"
+        BRANCH="$(params.output-branch)"
+        BASE_BRANCH="$(params.base-branch)"
+        TECHNOLOGY="$(params.source-technology)"
+        PR_TITLE="$(params.pr-title)"
+
+        # ── Validate token ──────────────────────────────────────────────
+        if [ -z "$GIT_TOKEN" ]; then
+          echo "ERROR: git-token param is empty."
+          exit 1
+        fi
+        echo "Token received (length: ${#GIT_TOKEN})"
+
+        # ── Parse owner/repo from URL ───────────────────────────────────
+        # Handles https://github.com/owner/repo.git and https://github.com/owner/repo
+        OWNER_REPO=$(echo "$OUTPUT_REPO" | sed 's|https://github.com/||; s|\.git$||')
+        OWNER=$(echo "$OWNER_REPO" | cut -d/ -f1)
+        REPO=$(echo "$OWNER_REPO" | cut -d/ -f2)
+        echo "Target: ${OWNER}/${REPO} branch: ${BRANCH}"
+
+        # ── Verify token and detect default branch ─────────────────────
+        REPO_INFO=$(curl -s -w "\n%{http_code}" \
+          -H "Authorization: Bearer ${GIT_TOKEN}" \
+          -H "Accept: application/vnd.github+json" \
+          "https://api.github.com/repos/${OWNER}/${REPO}")
+        HTTP_CODE=$(echo "$REPO_INFO" | tail -1)
+        REPO_JSON=$(echo "$REPO_INFO" | sed '$d')
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "ERROR: Token cannot access ${OWNER}/${REPO} (HTTP ${HTTP_CODE})"
+          echo "Check that the token has 'contents:write' and 'pull_requests:write' permissions."
+          exit 1
+        fi
+        echo "Token verified: has access to ${OWNER}/${REPO}"
+
+        if [ "$BASE_BRANCH" = "main" ]; then
+          DETECTED=$(echo "$REPO_JSON" | jq -r '.default_branch // "main"')
+          if [ "$DETECTED" != "$BASE_BRANCH" ]; then
+            echo "Auto-detected default branch: ${DETECTED} (overriding '${BASE_BRANCH}')"
+            BASE_BRANCH="$DETECTED"
+          fi
+        fi
+
+        # ── Configure git ───────────────────────────────────────────────
+        git config user.email "x2a-bot@x2ansible.io"
+        git config user.name "X2A Migration Bot"
+
+        AUTHED_URL="https://x-access-token:${GIT_TOKEN}@github.com/${OWNER}/${REPO}.git"
+
+        # ── Set up remote and branch ────────────────────────────────────
+        if git remote get-url output > /dev/null 2>&1; then
+          git remote set-url output "$AUTHED_URL"
+        else
+          git remote add output "$AUTHED_URL"
+        fi
+
+        git checkout -b "$BRANCH" 2>/dev/null || git checkout "$BRANCH"
+        git add -A
+
+        if git diff --cached --quiet; then
+          echo "No changes to commit — workspace is clean."
+        else
+          git commit -m "feat: migrate ${TECHNOLOGY} to Ansible via x2a-convertor"
+        fi
+
+        echo "Pushing to ${OWNER}/${REPO} branch ${BRANCH}..."
+        git push -u output "$BRANCH" --force
+
+        echo "Push successful."
+
+        # ── Create pull request ─────────────────────────────────────────
+        if [ -z "$PR_TITLE" ]; then
+          PR_TITLE="feat: ${TECHNOLOGY} to Ansible migration"
+        fi
+
+        EXISTING_PR=$(curl -s \
+          -H "Authorization: Bearer ${GIT_TOKEN}" \
+          -H "Accept: application/vnd.github+json" \
+          "https://api.github.com/repos/${OWNER}/${REPO}/pulls?head=${OWNER}:${BRANCH}&base=${BASE_BRANCH}&state=open" \
+          | jq 'length')
+
+        if [ "$EXISTING_PR" -gt 0 ]; then
+          PR_URL=$(curl -s \
+            -H "Authorization: Bearer ${GIT_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/pulls?head=${OWNER}:${BRANCH}&base=${BASE_BRANCH}&state=open" \
+            | jq -r '.[0].html_url')
+          echo "PR already exists — force-push updated it: ${PR_URL}"
+        else
+          PR_BODY=$(cat <<PREOF
+        ## X2Ansible Migration
+        This PR was automatically generated by the X2Ansible migration pipeline.
+
+        **Source technology:** ${TECHNOLOGY}
+        **Branch:** \`${BRANCH}\`
+
+        ### What was done
+        - Analyzed the ${TECHNOLOGY} codebase structure
+        - Generated Ansible roles, playbooks, and inventory
+        - Mapped ${TECHNOLOGY} resources to Ansible equivalents
+
+        ### Next steps
+        - [ ] Review the generated Ansible code
+        - [ ] Run \`ansible-lint\` on the output
+        - [ ] Test in a staging environment
+        - [ ] Merge when satisfied
+        PREOF
+        )
+
+          PR_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${GIT_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/pulls" \
+            -d "$(jq -n \
+              --arg title "$PR_TITLE" \
+              --arg body "$PR_BODY" \
+              --arg head "$BRANCH" \
+              --arg base "$BASE_BRANCH" \
+              '{title: $title, body: $body, head: $head, base: $base}')")
+
+          HTTP_CODE=$(echo "$PR_RESPONSE" | tail -1)
+          RESPONSE_BODY=$(echo "$PR_RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" = "201" ]; then
+            PR_URL=$(echo "$RESPONSE_BODY" | jq -r '.html_url')
+            echo "PR created: ${PR_URL}"
+          else
+            echo "WARNING: PR creation returned HTTP ${HTTP_CODE}"
+            echo "$RESPONSE_BODY" | jq -r '.message // .errors // .' 2>/dev/null || echo "$RESPONSE_BODY"
+            echo "Push succeeded but PR creation failed — you can create the PR manually."
+          fi
+        fi
+
+        echo ""
+        echo "=== DONE ==="
