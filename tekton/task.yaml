@@ -33,7 +33,7 @@ spec:
     - name: llm-provider
       type: string
       default: ollama
-      description: LLM provider (ollama, maas, or laptop)
+      description: LLM provider (ollama, maas, ollama-laptop, or laptop)
     - name: llm-model
       type: string
       default: openai/qwen3:14b
@@ -73,8 +73,19 @@ spec:
         NUM_CTX="$(params.num-ctx)"
         OLLAMA_HOST="http://ollama.ollama.svc.cluster.local:11434"
 
+        LAPTOP_OLLAMA="http://192.168.2.186:11434"
+
         case "$(params.llm-provider)" in
           laptop)  export OPENAI_API_BASE="http://192.168.2.186:1234/v1" ;;
+          ollama-laptop)
+            export OPENAI_API_BASE="${LAPTOP_OLLAMA}/v1"
+
+            OLLAMA_MODEL=$(echo "$(params.llm-model)" | sed 's|^openai/||')
+            echo "Loading model ${OLLAMA_MODEL} on laptop Ollama with num_ctx=${NUM_CTX}..."
+            curl -sf "${LAPTOP_OLLAMA}/api/generate" \
+              -d "{\"model\":\"${OLLAMA_MODEL}\",\"prompt\":\"hi\",\"options\":{\"num_ctx\":${NUM_CTX}},\"stream\":false}" \
+              > /dev/null 2>&1 || echo "Warning: could not pre-load model with num_ctx"
+            ;;
           maas)
             if [ -z "${MAAS_API_KEY:-}" ]; then
               echo "ERROR: MAAS_API_KEY is empty. Ensure the x2a-maas-api-key secret exists."
@@ -83,16 +94,6 @@ spec:
             fi
             export OPENAI_API_BASE="https://maas-rhdp.apps.maas.redhatworkshops.io/v1"
             export OPENAI_API_KEY="${MAAS_API_KEY}"
-
-            # Cap MAX_TOKENS for MAAS models with limited context windows
-            case "$(params.llm-model)" in
-              deepseek-r1-distill-qwen-14b)
-                if [ "${MAX_TOKENS}" -gt 8192 ]; then
-                  export MAX_TOKENS="8192"
-                  echo "Capped MAX_TOKENS to 8192 for deepseek-r1-distill-qwen-14b (16K context)"
-                fi
-                ;;
-            esac
             echo "Using MAAS endpoint with model $(params.llm-model)"
             ;;
           *)
