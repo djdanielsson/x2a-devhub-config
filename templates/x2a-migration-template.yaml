@@ -114,9 +114,9 @@ spec:
                   description: Select the Ollama model from your laptop
                   default: openai/gemma4:31b-it-q4_K_M
                   enum:
-                    - openai/gemma4:31b-it-q4_K_M
-                    - openai/gpt-oss:20b
-                    - openai/qwen3.6:35b-a3b
+                    - gemma4:31b-it-q4_K_M
+                    - gpt-oss:20b
+                    - qwen3.6:35b-a3b
                   enumNames:
                     - Gemma4 31B IT Q4_K_M (recommended)
                     - GPT-OSS 20B
