@@ -76,6 +76,11 @@ spec:
         case "$(params.llm-provider)" in
           laptop)  export OPENAI_API_BASE="http://192.168.2.186:1234/v1" ;;
           maas)
+            if [ -z "${MAAS_API_KEY:-}" ]; then
+              echo "ERROR: MAAS_API_KEY is empty. Ensure the x2a-maas-api-key secret exists."
+              echo "Add 'maas-api-key' field to the ocp-lab/x2a-devhub Bitwarden item."
+              exit 1
+            fi
             export OPENAI_API_BASE="https://maas-rhdp.apps.maas.redhatworkshops.io/v1"
             export OPENAI_API_KEY="${MAAS_API_KEY}"
             echo "Using MAAS endpoint with model $(params.llm-model)"
