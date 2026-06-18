@@ -83,6 +83,16 @@ spec:
             fi
             export OPENAI_API_BASE="https://maas-rhdp.apps.maas.redhatworkshops.io/v1"
             export OPENAI_API_KEY="${MAAS_API_KEY}"
+
+            # Cap MAX_TOKENS for MAAS models with limited context windows
+            case "$(params.llm-model)" in
+              deepseek-r1-distill-qwen-14b)
+                if [ "${MAX_TOKENS}" -gt 8192 ]; then
+                  export MAX_TOKENS="8192"
+                  echo "Capped MAX_TOKENS to 8192 for deepseek-r1-distill-qwen-14b (16K context)"
+                fi
+                ;;
+            esac
             echo "Using MAAS endpoint with model $(params.llm-model)"
             ;;
           *)
