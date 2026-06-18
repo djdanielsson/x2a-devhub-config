@@ -33,7 +33,7 @@ spec:
     - name: llm-provider
       type: string
       default: ollama
-      description: LLM provider (ollama or laptop)
+      description: LLM provider (ollama, maas, or laptop)
     - name: llm-model
       type: string
       default: openai/qwen3:14b
@@ -60,6 +60,12 @@ spec:
           value: not-needed
         - name: MAX_TOKENS
           value: $(params.max-tokens)
+        - name: MAAS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: x2a-maas-api-key
+              key: api-key
+              optional: true
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
@@ -69,6 +75,11 @@ spec:
 
         case "$(params.llm-provider)" in
           laptop)  export OPENAI_API_BASE="http://192.168.2.186:1234/v1" ;;
+          maas)
+            export OPENAI_API_BASE="https://maas-rhdp.apps.maas.redhatworkshops.io/v1"
+            export OPENAI_API_KEY="${MAAS_API_KEY}"
+            echo "Using MAAS endpoint with model $(params.llm-model)"
+            ;;
           *)
             export OPENAI_API_BASE="${OLLAMA_HOST}/v1"
 

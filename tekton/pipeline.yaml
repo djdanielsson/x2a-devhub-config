@@ -23,7 +23,7 @@ spec:
     - name: llm-provider
       type: string
       default: ollama
-      description: LLM provider (ollama or laptop)
+      description: LLM provider (ollama, maas, or laptop)
     - name: llm-model
       type: string
       default: openai/qwen3:14b

@@ -56,9 +56,11 @@ spec:
           default: ollama
           enum:
             - ollama
+            - maas
             - laptop
           enumNames:
             - Ollama (cluster)
+            - MAAS (RHDP cloud)
             - Laptop
       dependencies:
         llmProvider:
@@ -87,6 +89,20 @@ spec:
                     - DeepSeek R1 14B
                     - Gemma3 12B
                     - Llama 3.1 8B
+            - properties:
+                llmProvider:
+                  const: maas
+                llmModel:
+                  title: AI Model
+                  type: string
+                  description: Select the MAAS RHDP model for migration
+                  default: gpt-oss-120b
+                  enum:
+                    - gpt-oss-120b
+                    - deepseek-r1-distill-qwen-14b
+                  enumNames:
+                    - GPT-OSS 120B (recommended)
+                    - DeepSeek R1 Distill Qwen 14B
             - properties:
                 llmProvider:
                   const: laptop
@@ -150,11 +166,15 @@ spec:
             - 8192
             - 16384
             - 32768
+            - 65536
+            - 131072
           enumNames:
             - 4K (fast, short output)
             - 8K (balanced)
             - 16K (default, recommended)
             - 32K (large output)
+            - 64K (very large output)
+            - 128K (maximum output)
         numCtx:
           title: Context Window Size
           type: integer
@@ -166,12 +186,16 @@ spec:
             - 32768
             - 65536
             - 131072
+            - 262144
+            - 524288
           enumNames:
             - 8K (small models)
             - 16K
             - 32K (default, recommended)
             - 64K (large models)
             - 128K (very large models)
+            - 256K
+            - 512K (maximum)
 
   steps:
     - id: trigger-tekton-pipeline
